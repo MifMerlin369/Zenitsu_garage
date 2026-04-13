@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Zenitsu — Gestion Atelier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ████ LOGIN ████████████████████████████████████████████████████████ -->
+<div id="sc-login" class="screen active">
+  <div class="login-bg"><div class="login-grid"></div></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">ZN</div>
+      <div>
+        <div class="logo-sub">LOGICIEL DE GESTION ATELIER</div>
+        <div class="logo-title">Zenitsu <em>Garage</em></div>
+      </div>
+    </div>
+    <div class="fgroup"><label class="flbl">IDENTIFIANT</label>
+      <input id="l-user" class="finp" placeholder="Saisir l'identifiant"/></div>
+    <div class="fgroup"><label class="flbl">MOT DE PASSE</label>
+      <input id="l-pass" class="finp" type="password" placeholder="••••••••"/></div>
+    <div id="l-err" class="toast toast-err hidden"></div>
+    <button id="btn-login" class="btn-cta">CONNEXION →</button>
+    <div class="login-hint">admin / admin123 · technicien1 / tech123</div>
+  </div>
+</div>
+
+<!-- ████ APP ██████████████████████████████████████████████████████████ -->
+<div id="sc-app" class="screen">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">ZN</div>
+      <span class="tb-title">Zenitsu <em>Garage</em></span>
+    </div>
+
+    <!-- Barre de recherche universelle -->
+    <div class="gsearch-wrap" id="gsearch-wrap">
+      <svg viewBox="0 0 24 24" class="gsearch-ico"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="gsearch" class="gsearch" placeholder="Rechercher : client, plaque, VIN, technicien, N° dossier..."/>
+      <div id="gsearch-results" class="gsearch-dropdown hidden"></div>
+    </div>
+
+    <div class="tb-right">
+      <div id="tb-urgents" class="urgents-badge hidden">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="tb-urgents-count">0</span> urgent(s)
+      </div>
+      <span id="tb-user" class="tb-user"></span>
+      <span id="tb-role" class="tb-role"></span>
+      <button id="btn-logout" class="btn-sm-ghost">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <nav class="snav">
+        <button class="snav-item active" data-tab="dashboard">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="snav-item" data-tab="kanban">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="12" rx="1"/><rect x="17" y="3" width="4" height="15" rx="1"/></svg>
+          <span>Kanban</span>
+        </button>
+        <button class="snav-item" data-tab="dossiers">
+          <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Dossiers</span>
+          <span id="snav-badge-dos" class="snav-badge"></span>
+        </button>
+        <button class="snav-item" data-tab="vehicles">
+          <svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+          <span>Véhicules</span>
+        </button>
+        <button class="snav-item" data-tab="clients">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Clients</span>
+        </button>
+        <div class="snav-sep"></div>
+        <button class="snav-item accent" data-tab="nouveau">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          <span>Nouveau dossier</span>
+        </button>
+        <div class="snav-sep"></div>
+        <button class="snav-item" data-tab="admin" id="snav-admin">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          <span>Utilisateurs</span>
+        </button>
+      </nav>
+      <div class="sidebar-mini-stats" id="sidebar-mini-stats"></div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- ── DASHBOARD ─────────────────────────────────────────────── -->
+      <section class="tab active" id="tab-dashboard">
+        <div class="ph"><h1 class="ptitle">Dashboard</h1><div class="pdate" id="pdate"></div></div>
+        <div class="kpi-row" id="kpi-row"></div>
+        <div class="dash-grid">
+          <div>
+            <div class="sh">Dossiers urgents / récents</div>
+            <div id="dash-recent"></div>
+          </div>
+          <div>
+            <div class="sh">Activité par statut</div>
+            <div class="stat-bars" id="stat-bars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── KANBAN ────────────────────────────────────────────────── -->
+      <section class="tab" id="tab-kanban">
+        <div class="ph"><h1 class="ptitle">Kanban Atelier</h1>
+          <button class="btn-sm-ghost" onclick="loadKanban()">↻ Actualiser</button>
+        </div>
+        <div class="kanban-board" id="kanban-board"></div>
+      </section>
+
+      <!-- ── DOSSIERS ──────────────────────────────────────────────── -->
+      <section class="tab" id="tab-dossiers">
+        <div class="ph">
+          <h1 class="ptitle">Dossiers</h1>
+          <div class="ph-filters">
+            <select id="f-statut" class="fsel"><option value="">Tous statuts</option>
+              <option value="en_cours">En cours</option>
+              <option value="termine">Terminé</option>
+              <option value="archive">Archivé</option></select>
+            <select id="f-urgence" class="fsel"><option value="">Toute urgence</option>
+              <option value="normal">Normal</option><option value="urgent">Urgent</option>
+              <option value="tres_urgent">Très urgent</option></select>
+            <select id="f-type" class="fsel"><option value="">Tout type</option>
+              <option value="entretien">Entretien</option><option value="reparation">Réparation</option>
+              <option value="diagnostic">Diagnostic</option><option value="carrosserie">Carrosserie</option>
+              <option value="controle">Contrôle</option></select>
+            <button class="btn-primary" onclick="App.goTab('nouveau')">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nouveau
+            </button>
+          </div>
+        </div>
+        <div id="dos-list"></div>
+      </section>
+
+      <!-- ── VÉHICULES ─────────────────────────────────────────────── -->
+      <section class="tab" id="tab-vehicles">
+        <div class="ph">
+          <h1 class="ptitle">Véhicules</h1>
+          <div class="search-inline">
+            <input id="v-search" class="finp finp-sm" placeholder="Plaque, VIN, marque, client..."/>
+            <button class="btn-primary" onclick="loadVehicles()">Rechercher</button>
+          </div>
+        </div>
+        <div id="vehicles-grid"></div>
+      </section>
+
+      <!-- ── CLIENTS ───────────────────────────────────────────────── -->
+      <section class="tab" id="tab-clients">
+        <div class="ph">
+          <h1 class="ptitle">Clients</h1>
+          <div class="search-inline">
+            <input id="c-search" class="finp finp-sm" placeholder="Nom, téléphone, email..."/>
+            <button class="btn-primary" onclick="loadClients()">Rechercher</button>
+          </div>
+        </div>
+        <div id="clients-list"></div>
+      </section>
+
+      <!-- ── NOUVEAU DOSSIER ───────────────────────────────────────── -->
+      <section class="tab" id="tab-nouveau">
+        <div class="ph">
+          <h1 class="ptitle" id="form-title">Nouveau dossier</h1>
+          <span id="form-numero" class="form-numero"></span>
+        </div>
+        <input type="hidden" id="fd-id"/>
+        <input type="hidden" id="fd-vehicle-id"/>
+        <input type="hidden" id="fd-client-id"/>
+
+        <!-- Recherche rapide véhicule -->
+        <div class="smart-lookup-bar" id="lookup-bar">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="lookup-input" class="lookup-inp" placeholder="Saisir la plaque ou le VIN pour auto-remplir..."/>
+          <button class="btn-sm-ghost" id="btn-lookup">Rechercher</button>
+          <div id="lookup-result" class="lookup-result hidden"></div>
+        </div>
+        <div id="alerte-km" class="alerte-km hidden"></div>
+
+        <!-- BLOC CLIENT -->
+        <div class="fsection">
+          <div class="fsection-title">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            CLIENT
+          </div>
+          <div class="fgrid">
+            <div class="fgroup col2"><label class="flbl">NOM COMPLET <span class="req">*</span></label>
+              <input class="finp" id="fc-nom" placeholder="Nom du client"/></div>
+            <div class="fgroup"><label class="flbl">TÉLÉPHONE</label>
+              <input class="finp" id="fc-tel" placeholder="+213 06..." type="tel"/></div>
+            <div class="fgroup"><label class="flbl">EMAIL</label>
+              <input class="finp" id="fc-email" placeholder="email@..." type="email"/></div>
+            <div class="fgroup colfull"><label class="flbl">ADRESSE</label>
+              <input class="finp" id="fc-adresse" placeholder="Adresse complète"/></div>
+          </div>
+        </div>
+
+        <!-- BLOC VÉHICULE -->
+        <div class="fsection">
+          <div class="fsection-title">
+            <svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+            VÉHICULE
+          </div>
+          <div class="fgrid">
+            <div class="fgroup"><label class="flbl">PLAQUE <span class="req">*</span></label>
+              <input class="finp mono" id="fv-matricule" placeholder="12345-123-16" oninput="this.value=this.value.toUpperCase()"/></div>
+            <div class="fgroup"><label class="flbl">VIN / CHÂSSIS</label>
+              <input class="finp mono" id="fv-vin" placeholder="17 caractères (optionnel)" maxlength="17" oninput="this.value=this.value.toUpperCase()"/></div>
+            <div class="fgroup"><label class="flbl">MARQUE</label>
+              <input class="finp" id="fv-marque" placeholder="Renault"/></div>
+            <div class="fgroup"><label class="flbl">MODÈLE</label>
+              <input class="finp" id="fv-modele" placeholder="Clio 4"/></div>
+            <div class="fgroup"><label class="flbl">ANNÉE</label>
+              <input class="finp" id="fv-annee" type="number" placeholder="2020" min="1950" max="2099"/></div>
+            <div class="fgroup"><label class="flbl">COULEUR</label>
+              <input class="finp" id="fv-couleur" placeholder="Blanc nacré"/></div>
+            <div class="fgroup"><label class="flbl">CARBURANT</label>
+              <select class="finp" id="fv-carburant">
+                <option value="essence">Essence</option><option value="diesel">Diesel</option>
+                <option value="hybride">Hybride</option><option value="electrique">Électrique</option>
+                <option value="gpl">GPL</option>
+              </select></div>
+            <div class="fgroup"><label class="flbl">TRANSMISSION</label>
+              <select class="finp" id="fv-transmission">
+                <option value="manuelle">Manuelle</option><option value="automatique">Automatique</option>
+                <option value="semi-auto">Semi-auto</option>
+              </select></div>
+          </div>
+        </div>
+
+        <!-- BLOC INTERVENTION -->
+        <div class="fsection">
+          <div class="fsection-title">
+            <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            INTERVENTION
+          </div>
+          <div class="fgrid">
+            <div class="fgroup"><label class="flbl">TYPE</label>
+              <select class="finp" id="fi-type">
+                <option value="reparation">Réparation</option><option value="entretien">Entretien</option>
+                <option value="diagnostic">Diagnostic</option><option value="carrosserie">Carrosserie</option>
+                <option value="controle">Contrôle technique</option>
+              </select></div>
+            <div class="fgroup"><label class="flbl">URGENCE</label>
+              <select class="finp" id="fi-urgence">
+                <option value="normal">Normal</option><option value="urgent">Urgent</option>
+                <option value="tres_urgent">🔴 Très urgent</option>
+              </select></div>
+            <div class="fgroup"><label class="flbl">STATUT</label>
+              <select class="finp" id="fi-statut">
+                <option value="en_attente">En attente</option><option value="en_cours">En cours</option>
+                <option value="termine">Terminé</option><option value="livre">Livré</option>
+              </select></div>
+            <div class="fgroup"><label class="flbl">DATE ENTRÉE</label>
+              <input class="finp" id="fi-date-entree" type="date"/></div>
+            <div class="fgroup"><label class="flbl">DATE SORTIE PRÉVUE</label>
+              <input class="finp" id="fi-date-sortie-prevue" type="date"/></div>
+            <div class="fgroup"><label class="flbl">DATE SORTIE RÉELLE</label>
+              <input class="finp" id="fi-date-sortie-reelle" type="date"/></div>
+          </div>
+          <div class="fgrid">
+            <div class="fgroup colfull"><label class="flbl">DESCRIPTION DE LA PANNE</label>
+              <textarea class="finp ta" id="fi-panne" placeholder="Symptômes, codes OBD, plainte client..."></textarea></div>
+            <div class="fgroup colfull"><label class="flbl">RÉSOLUTION / TRAVAUX</label>
+              <textarea class="finp ta" id="fi-resolution" placeholder="Travaux effectués, solution appliquée..."></textarea></div>
+            <div class="fgroup colfull"><label class="flbl">PIÈCES CHANGÉES</label>
+              <textarea class="finp ta ta-sm" id="fi-pieces" placeholder="Filtre à huile, courroie, plaquettes AV/AR..."></textarea></div>
+            <div class="fgroup col2"><label class="flbl">GARANTIE SUR PIÈCES</label>
+              <div class="inp-with-unit">
+                <input class="finp" id="fi-garantie" type="number" placeholder="0" min="0"/>
+                <span class="inp-unit">mois</span>
+              </div></div>
+            <div class="fgroup colfull"><label class="flbl">OBSERVATIONS</label>
+              <textarea class="finp ta ta-sm" id="fi-observations" placeholder="Remarques, recommandations au client..."></textarea></div>
+          </div>
+        </div>
+
+        <!-- BLOC FINANCIER -->
+        <div class="fsection">
+          <div class="fsection-title">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            FINANCIER
+          </div>
+          <div class="fgrid">
+            <div class="fgroup"><label class="flbl">TYPE DOCUMENT</label>
+              <select class="finp" id="fi-tarif">
+                <option value="devis">Devis</option><option value="facture">Facture</option>
+              </select></div>
+            <div class="fgroup"><label class="flbl">COÛT PIÈCES (CFA)</label>
+              <input class="finp mono" id="fi-pieces-cout" type="number" placeholder="0" min="0" step="0.01"/></div>
+            <div class="fgroup"><label class="flbl">MAIN D'ŒUVRE (CFA)</label>
+              <input class="finp mono" id="fi-mo" type="number" placeholder="0" min="0" step="0.01"/></div>
+            <div class="fgroup"><label class="flbl">REMISE (CFA)</label>
+              <input class="finp mono" id="fi-remise" type="number" placeholder="0" min="0" step="0.01"/></div>
+            <div class="fgroup col2">
+              <label class="flbl">TOTAL TTC</label>
+              <div class="total-box" id="total-box">0,00 DA</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="form-msg" class="toast hidden"></div>
+        <div class="form-actions">
+          <button class="btn-ghost" id="btn-cancel">Annuler</button>
+          <button class="btn-primary" id="btn-save">
+            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Enregistrer le dossier
+          </button>
+        </div>
+      </section>
+
+      <!-- ── ADMIN ─────────────────────────────────────────────────── -->
+      <section class="tab" id="tab-admin">
+        <div class="ph"><h1 class="ptitle">Gestion utilisateurs</h1></div>
+        <div class="admin-layout">
+          <div class="card">
+            <div class="card-head">Nouvel utilisateur</div>
+            <div class="fgroup"><label class="flbl">IDENTIFIANT</label>
+              <input class="finp" id="au-user" placeholder="prenom.nom"/></div>
+            <div class="fgroup"><label class="flbl">MOT DE PASSE</label>
+              <input class="finp" id="au-pass" type="password" placeholder="••••••••"/></div>
+            <div class="fgroup"><label class="flbl">RÔLE</label>
+              <select class="finp" id="au-role">
+                <option value="technician">Technicien</option>
+                <option value="admin">Administrateur</option>
+              </select></div>
+            <div id="au-msg" class="toast hidden"></div>
+            <button class="btn-primary" id="btn-add-user" style="margin-top:16px">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Créer
+            </button>
+          </div>
+          <div class="card admin-members-card">
+            <div class="card-head">Membres du garage</div>
+            <div id="users-list"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ████ MODAL DÉTAIL DOSSIER ████████████████████████████████████████ -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-numero" id="m-numero"></div>
+        <div class="modal-client" id="m-client"></div>
+      </div>
+      <div class="modal-head-right">
+        <div id="m-badge"></div>
+        <div id="m-urgence-badge"></div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeModal()">Fermer</button>
+      <div class="modal-statut-change" id="modal-statut-change">
+        <select id="m-statut-sel" class="fsel">
+          <option value="en_cours">En cours</option>
+          <option value="termine">Terminé</option>
+          <option value="archive">Archivé</option>
+        </select>
+        <button class="btn-primary" id="m-btn-statut">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Changer statut
+        </button>
+      </div>
+      <button class="btn-primary" id="m-btn-print">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimer
+      </button>
+      <button class="btn-warning" id="m-btn-edit">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Modifier
+      </button>
+      <button class="btn-danger" id="m-btn-delete">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ████ MODAL FICHE VÉHICULE ████████████████████████████████████████ -->
+<div id="modal-vehicle" class="modal-overlay hidden">
+  <div class="modal-box modal-wide">
+    <div class="modal-head">
+      <div>
+        <div class="modal-numero" id="mv-plaque"></div>
+        <div class="modal-client" id="mv-car"></div>
+      </div>
+      <div class="modal-head-right">
+        <button class="modal-close" onclick="document.getElementById('modal-vehicle').classList.add('hidden')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-vehicle-body"></div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="document.getElementById('modal-vehicle').classList.add('hidden')">Fermer</button>
+      <button class="btn-primary" id="mv-new-dos">+ Nouveau dossier pour ce véhicule</button>
+    </div>
+  </div>
+</div>
+
+<!-- ████ MODAL UTILISATEUR ███████████████████████████████████████ -->
+<div id="modal-user" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-numero" id="mu-role-badge"></div>
+        <div class="modal-client" id="mu-username-title"></div>
+      </div>
+      <div class="modal-head-right">
+        <button class="modal-close" onclick="closeUserModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mu-id"/>
+
+      <!-- Stats activité -->
+      <div class="mu-stats" id="mu-stats"></div>
+
+      <!-- Formulaire édition -->
+      <div class="fsection" style="margin-top:16px">
+        <div class="fsection-title">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          MODIFIER
+        </div>
+        <div class="fgroup"><label class="flbl">IDENTIFIANT</label>
+          <input class="finp" id="mu-user" placeholder="prenom.nom"/></div>
+        <div class="fgroup"><label class="flbl">NOUVEAU MOT DE PASSE <span style="color:var(--tx3);font-size:9px">(laisser vide = inchangé)</span></label>
+          <input class="finp" id="mu-pass" type="password" placeholder="••••••••"/></div>
+        <div class="fgroup"><label class="flbl">RÔLE</label>
+          <select class="finp" id="mu-role">
+            <option value="technician">Technicien</option>
+            <option value="admin">Administrateur</option>
+          </select></div>
+        <div id="mu-msg" class="toast hidden" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Historique actions -->
+      <div class="fsection" style="margin-top:12px">
+        <div class="fsection-title">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ACTIVITÉ
+        </div>
+        <div id="mu-logs"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeUserModal()">Annuler</button>
+      <button class="btn-primary" id="mu-btn-save">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ████ PRINT ZONE ███████████████████████████████████████████████████ -->
+<div id="print-zone" class="print-zone"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
