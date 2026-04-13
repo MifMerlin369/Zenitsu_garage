@@ -1181,3 +1181,160 @@ document.addEventListener("DOMContentLoaded", () => {
   // Admin
   $("btn-add-user").addEventListener("click", addUser);
 });
+
+
+
+/* ══════════════════════════════════════════════════════════════════
+   ANTI-SLEEP + HEALTH SYSTEM — Render Free Tier
+   Ping toutes les 10 min pour éviter la mise en veille (seuil 15 min)
+══════════════════════════════════════════════════════════════════ */
+
+const KeepAlive = (() => {
+  const INTERVAL_MS  = 10 * 60 * 1000; // 10 minutes
+  const PING_URL     = `${window.location.origin}/api/ping`;
+  const MAX_HISTORY  = 10;
+
+  let intervalId   = null;
+  let pingCount    = 0;
+  let failCount    = 0;
+  let lastPingTime = null;
+  let lastStatus   = null;
+  const history    = []; // { time, ok, latency }
+
+  // ── Ping ──────────────────────────────────────────────────────────
+  async function ping() {
+    const t0 = Date.now();
+    try {
+      const res = await fetch(PING_URL, { cache: "no-store" });
+      const latency = Date.now() - t0;
+      const ok = res.ok;
+
+      pingCount++;
+      if (!ok) failCount++;
+      lastPingTime = new Date();
+      lastStatus   = ok ? "ok" : "error";
+
+      history.push({ time: lastPingTime, ok, latency });
+      if (history.length > MAX_HISTORY) history.shift();
+
+      _updateUI(ok, latency);
+      console.log(`[KeepAlive] ping #${pingCount} — ${ok ? "✅" : "❌"} ${latency}ms`);
+    } catch (err) {
+      failCount++;
+      lastStatus = "error";
+      lastPingTime = new Date();
+      history.push({ time: lastPingTime, ok: false, latency: null });
+      if (history.length > MAX_HISTORY) history.shift();
+      _updateUI(false, null);
+      console.warn(`[KeepAlive] ping failed —`, err.message);
+    }
+  }
+
+  // ── UI Update ─────────────────────────────────────────────────────
+  function _updateUI(ok, latency) {
+    const dot    = document.getElementById("ka-dot");
+    const label  = document.getElementById("ka-label");
+    const detail = document.getElementById("ka-detail");
+    if (!dot) return; // widget pas encore dans le DOM
+
+    dot.className = `ka-dot ${ok ? "ka-ok" : "ka-err"}`;
+    label.textContent = ok ? "Serveur actif" : "Serveur injoignable";
+    const timeStr = lastPingTime.toLocaleTimeString("fr-FR");
+    detail.textContent = ok
+      ? `Dernier ping : ${timeStr} — ${latency}ms — Total : ${pingCount}`
+      : `Erreur à ${timeStr} — Échecs : ${failCount}/${pingCount}`;
+  }
+
+  // ── Inject Widget dans le DOM ──────────────────────────────────────
+  function _injectWidget() {
+    if (document.getElementById("ka-widget")) return;
+
+    const widget = document.createElement("div");
+    widget.id = "ka-widget";
+    widget.innerHTML = `
+      <div id="ka-dot" class="ka-dot ka-pending"></div>
+      <div class="ka-info">
+        <span id="ka-label">Initialisation…</span>
+        <span id="ka-detail" class="ka-detail">En attente du premier ping</span>
+      </div>
+      <button id="ka-toggle" title="Activer/Désactiver anti-sleep">⏸</button>
+    `;
+    document.body.appendChild(widget);
+
+    document.getElementById("ka-toggle").addEventListener("click", () => {
+      if (intervalId) { stop(); document.getElementById("ka-toggle").textContent = "▶"; }
+      else            { start(); document.getElementById("ka-toggle").textContent = "⏸"; }
+    });
+
+    // Styles injectés dynamiquement
+    const style = document.createElement("style");
+    style.textContent = `
+      #ka-widget {
+        position: fixed;
+        bottom: 16px; right: 16px;
+        display: flex; align-items: center; gap: 8px;
+        background: rgba(20,20,30,0.92);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 8px 14px;
+        font-size: 11px;
+        color: #ccc;
+        z-index: 9999;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        user-select: none;
+        transition: opacity .3s;
+      }
+      #ka-widget:hover { opacity: 1 !important; }
+      .ka-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: background .4s;
+      }
+      .ka-ok      { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+      .ka-err     { background: #ef4444; box-shadow: 0 0 6px #ef444488; animation: ka-blink 1s infinite; }
+      .ka-pending { background: #f59e0b; }
+      @keyframes ka-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+      .ka-info { display: flex; flex-direction: column; gap: 1px; }
+      .ka-detail { font-size: 10px; color: #666; }
+      #ka-toggle {
+        background: none; border: none;
+        color: #888; cursor: pointer;
+        font-size: 13px; padding: 0 2px;
+        transition: color .2s;
+      }
+      #ka-toggle:hover { color: #fff; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ── Start / Stop ──────────────────────────────────────────────────
+  function start() {
+    if (intervalId) return;
+    ping(); // ping immédiat au démarrage
+    intervalId = setInterval(ping, INTERVAL_MS);
+    console.log(`[KeepAlive] démarré — interval ${INTERVAL_MS / 60000} min`);
+  }
+
+  function stop() {
+    clearInterval(intervalId);
+    intervalId = null;
+    console.log("[KeepAlive] arrêté");
+  }
+
+  function getStats() {
+    return { pingCount, failCount, lastPingTime, lastStatus, history };
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+  function init() {
+    _injectWidget();
+    start();
+  }
+
+  return { init, start, stop, ping, getStats };
+})();
+
+// Démarre dès que le DOM est prêt
+document.addEventListener("DOMContentLoaded", () => KeepAlive.init());

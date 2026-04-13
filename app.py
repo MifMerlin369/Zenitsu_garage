@@ -763,6 +763,19 @@ def delete_vehicle(vid):
         db.commit()
     return jsonify({"success":True})
 
+# ══════════════════════════════════════════════════════════════════════
+# HEALTH / ANTI-SLEEP
+# ══════════════════════════════════════════════════════════════════════
+
+@app.route("/api/ping", methods=["GET"])
+def ping():
+    """Endpoint léger pour anti-sleep Render + health check."""
+    return jsonify({
+        "status": "ok",
+        "timestamp": _now(),
+        "service": "Zenitsu Garage"
+    })
+
 if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
