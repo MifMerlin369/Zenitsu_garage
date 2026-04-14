@@ -1253,11 +1253,10 @@ const KeepAlive = (() => {
     widget.id = "ka-widget";
     widget.innerHTML = `
       <div id="ka-dot" class="ka-dot ka-pending"></div>
-      <div class="ka-info">
-        <span id="ka-label">Initialisation…</span>
-        <span id="ka-detail" class="ka-detail">En attente du premier ping</span>
+      <div class="ka-tooltip">
+        <span id="ka-label">Initialisation…</span><br>
+        <span id="ka-detail" class="ka-detail" style="color:#666;font-size:10px">En attente du premier ping</span>
       </div>
-      <button id="ka-toggle" title="Activer/Désactiver anti-sleep">⏸</button>
     `;
     document.body.appendChild(widget);
 
@@ -1272,39 +1271,42 @@ const KeepAlive = (() => {
       #ka-widget {
         position: fixed;
         bottom: 16px; right: 16px;
-        display: flex; align-items: center; gap: 8px;
-        background: rgba(20,20,30,0.92);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px;
-        padding: 8px 14px;
-        font-size: 11px;
-        color: #ccc;
         z-index: 9999;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        user-select: none;
-        transition: opacity .3s;
+        cursor: default;
       }
-      #ka-widget:hover { opacity: 1 !important; }
       .ka-dot {
-        width: 10px; height: 10px;
+        width: 12px; height: 12px;
         border-radius: 50%;
-        flex-shrink: 0;
-        transition: background .4s;
+        transition: background .4s, transform .2s;
+        cursor: pointer;
       }
+      .ka-dot:hover { transform: scale(1.3); }
       .ka-ok      { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
       .ka-err     { background: #ef4444; box-shadow: 0 0 6px #ef444488; animation: ka-blink 1s infinite; }
       .ka-pending { background: #f59e0b; }
       @keyframes ka-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-      .ka-info { display: flex; flex-direction: column; gap: 1px; }
-      .ka-detail { font-size: 10px; color: #666; }
-      #ka-toggle {
-        background: none; border: none;
-        color: #888; cursor: pointer;
-        font-size: 13px; padding: 0 2px;
-        transition: color .2s;
+    
+      .ka-info, #ka-toggle { display: none; }
+    
+      #ka-widget:hover .ka-tooltip {
+        opacity: 1; pointer-events: auto;
       }
-      #ka-toggle:hover { color: #fff; }
+      .ka-tooltip {
+        position: absolute;
+        bottom: 20px; right: 0;
+        background: rgba(20,20,30,0.95);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 11px;
+        color: #ccc;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      }
     `;
     document.head.appendChild(style);
   }

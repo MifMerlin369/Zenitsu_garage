@@ -1,0 +1,4 @@
+changer mot de passe dans code source!
+Au lieu de saisir tous les problemes de la voiture dans un seul champ, si nous pouvons ajouter un menu qui permet d'ajouter les panne independament car apres le traitement useurs ne fera que confirmer avec un clique si le travail est regler ou pas; pour pouviir distinguer ceux reglé et non reglé.
+je veux ajouter des "visiteurs" si un client met plaque de sa voiture, il poura voit le dossier complet de sa voiture.
+mot de jour et de nuit! therme clair pour 7h00 am à 6h00 pm et les deux autres en aleatoire pour les autres heures.
