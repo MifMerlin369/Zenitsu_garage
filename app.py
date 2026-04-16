@@ -120,6 +120,16 @@ def init_db():
             created_at TEXT NOT NULL,
             FOREIGN KEY(dossier_id) REFERENCES dossiers(id)
         );
+
+        CREATE TABLE IF NOT EXISTS dossier_pannes (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            dossier_id  INTEGER NOT NULL,
+            description TEXT NOT NULL,
+            regle       INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT,
+            FOREIGN KEY(dossier_id) REFERENCES dossiers(id)
+        );
         """)
         db.commit()
 
@@ -504,7 +514,11 @@ def get_dossier(did):
         logs = db.execute(
             "SELECT * FROM dossier_logs WHERE dossier_id=? ORDER BY created_at DESC", (did,)
         ).fetchall()
-    return jsonify({**dict(d), "logs": [dict(l) for l in logs]})
+        pannes = db.execute(
+            "SELECT * FROM dossier_pannes WHERE dossier_id=? ORDER BY created_at ASC", (did,)
+        ).fetchall()
+    return jsonify({**dict(d), "logs": [dict(l) for l in logs],
+                    "pannes": [dict(p) for p in pannes]})
 
 @app.route("/api/dossiers", methods=["POST"])
 @token_required
@@ -636,8 +650,99 @@ def delete_dossier(did):
     return jsonify({"success":True})
 
 # ══════════════════════════════════════════════════════════════════════
-# STATS
+# PANNES INDÉPENDANTES
 # ══════════════════════════════════════════════════════════════════════
+
+@app.route("/api/dossiers/<int:did>/pannes", methods=["GET"])
+@token_required
+def list_pannes(did):
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM dossier_pannes WHERE dossier_id=? ORDER BY created_at ASC", (did,)
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/dossiers/<int:did>/pannes", methods=["POST"])
+@token_required
+def add_panne(did):
+    d = request.get_json(silent=True) or {}
+    desc = d.get("description","").strip()
+    if not desc:
+        return jsonify({"error":"Description requise"}), 400
+    now = _now()
+    with get_db() as db:
+        cur = db.execute(
+            "INSERT INTO dossier_pannes(dossier_id,description,regle,created_at,updated_at) VALUES(?,?,0,?,?)",
+            (did, desc, now, now))
+        log_action(db, did, request.user["username"], "PANNE_AJOUT", desc[:80])
+        db.commit()
+    return jsonify({"success":True, "id": cur.lastrowid}), 201
+
+@app.route("/api/pannes/<int:pid>/toggle", methods=["PATCH"])
+@token_required
+def toggle_panne(pid):
+    now = _now()
+    with get_db() as db:
+        row = db.execute("SELECT * FROM dossier_pannes WHERE id=?", (pid,)).fetchone()
+        if not row: return jsonify({"error":"Introuvable"}), 404
+        new_val = 0 if row["regle"] else 1
+        db.execute("UPDATE dossier_pannes SET regle=?, updated_at=? WHERE id=?",
+                   (new_val, now, pid))
+        log_action(db, row["dossier_id"], request.user["username"],
+                   "PANNE_STATUT", f"{'✅ Réglé' if new_val else '🔴 Non réglé'} — {row['description'][:60]}")
+        db.commit()
+    return jsonify({"success":True, "regle": new_val})
+
+@app.route("/api/pannes/<int:pid>", methods=["DELETE"])
+@token_required
+def delete_panne(pid):
+    with get_db() as db:
+        row = db.execute("SELECT * FROM dossier_pannes WHERE id=?", (pid,)).fetchone()
+        if not row: return jsonify({"error":"Introuvable"}), 404
+        db.execute("DELETE FROM dossier_pannes WHERE id=?", (pid,))
+        log_action(db, row["dossier_id"], request.user["username"],
+                   "PANNE_SUPPR", row["description"][:60])
+        db.commit()
+    return jsonify({"success":True})
+
+# ══════════════════════════════════════════════════════════════════════
+# PORTAIL VISITEUR — accès public par plaque
+# ══════════════════════════════════════════════════════════════════════
+
+@app.route("/api/public/vehicle/<matricule>", methods=["GET"])
+def public_vehicle(matricule):
+    """Route publique — client saisit sa plaque pour voir ses dossiers."""
+    with get_db() as db:
+        v = db.execute("""
+            SELECT v.id, v.matricule, v.marque, v.modele, v.annee,
+                   v.couleur, v.carburant, v.transmission,
+                   c.nom as client_nom
+            FROM vehicles v
+            LEFT JOIN clients c ON c.id=v.client_id
+            WHERE LOWER(v.matricule)=LOWER(?)
+            LIMIT 1""", (matricule.strip(),)).fetchone()
+        if not v:
+            return jsonify({"found": False}), 404
+        dossiers = db.execute("""
+            SELECT d.id, d.numero, d.statut, d.type_intervention, d.urgence,
+                   d.date_entree, d.date_sortie_prevue, d.date_sortie_reelle,
+                   d.panne_description, d.panne_resolution, d.pieces_changees,
+                   d.garantie_mois, d.observations, d.technician,
+                   d.cout_pieces, d.cout_main_oeuvre, d.remise, d.type_tarif
+            FROM dossiers d
+            WHERE d.vehicle_id=?
+            ORDER BY d.date_entree DESC""", (v["id"],)).fetchall()
+        # Pannes pour chaque dossier
+        result_dos = []
+        for d in dossiers:
+            pannes = db.execute(
+                "SELECT id, description, regle FROM dossier_pannes WHERE dossier_id=? ORDER BY created_at ASC",
+                (d["id"],)
+            ).fetchall()
+            result_dos.append({**dict(d), "pannes": [dict(p) for p in pannes]})
+    return jsonify({"found": True, "vehicle": dict(v), "dossiers": result_dos})
+
+
 
 @app.route("/api/stats", methods=["GET"])
 @token_required

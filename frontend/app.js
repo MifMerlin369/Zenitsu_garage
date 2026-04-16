@@ -491,9 +491,11 @@ function resetForm() {
   $("fi-type").value = "reparation"; $("fi-urgence").value = "normal"; $("fi-statut").value = "en_attente";
   $("fi-date-entree").value = new Date().toISOString().slice(0,10);
   ["fi-date-sortie-prevue","fi-date-sortie-reelle"].forEach(id=>$(id).value="");
-  ["fi-panne","fi-resolution","fi-pieces","fi-observations"].forEach(id=>$(id).value="");
+  ["fi-resolution","fi-pieces","fi-observations"].forEach(id=>$(id).value="");
   $("fi-garantie").value=""; $("fi-tarif").value="facture";
   ["fi-pieces-cout","fi-mo","fi-remise"].forEach(id=>$(id).value="");
+  // Réinitialiser les pannes locales
+  FormPannes.reset();
   updateTotal();
   $("form-msg").classList.add("hidden");
   $("alerte-km").classList.add("hidden");
@@ -546,7 +548,6 @@ function fillFormDossier(d) {
   $("fi-date-entree").value       = d.date_entree || "";
   $("fi-date-sortie-prevue").value= d.date_sortie_prevue || "";
   $("fi-date-sortie-reelle").value= d.date_sortie_reelle || "";
-  $("fi-panne").value             = d.panne_description || "";
   $("fi-resolution").value        = d.panne_resolution || "";
   $("fi-pieces").value            = d.pieces_changees || "";
   $("fi-garantie").value          = d.garantie_mois || "";
@@ -555,6 +556,8 @@ function fillFormDossier(d) {
   $("fi-pieces-cout").value       = d.cout_pieces || "";
   $("fi-mo").value                = d.cout_main_oeuvre || "";
   $("fi-remise").value            = d.remise || "";
+  // Pannes existantes
+  FormPannes.load(d.pannes || [], d.id);
   updateTotal();
 }
 
@@ -629,7 +632,8 @@ async function saveDossier() {
       statut:$("fi-statut").value, type_intervention:$("fi-type").value, urgence:$("fi-urgence").value,
       date_entree:$("fi-date-entree").value, date_sortie_prevue:$("fi-date-sortie-prevue").value,
       date_sortie_reelle:$("fi-date-sortie-reelle").value,
-      panne_description:$("fi-panne").value, panne_resolution:$("fi-resolution").value,
+      panne_description: FormPannes.getSummary(),
+      panne_resolution:$("fi-resolution").value,
       pieces_changees:$("fi-pieces").value, garantie_mois:$("fi-garantie").value||0,
       observations:$("fi-observations").value,
       type_tarif:$("fi-tarif").value,
@@ -648,6 +652,9 @@ async function saveDossier() {
     if (res.success) {
       const msg = editId ? "Dossier mis à jour." : `Dossier ${res.numero} créé avec succès.`;
       toast("form-msg", msg, "ok");
+      // Sauvegarder les pannes locales vers l'API
+      const dossierId = editId ? parseInt(editId) : res.id;
+      await FormPannes.syncToServer(dossierId);
       if (res.alerte) {
         $("alerte-km").textContent = res.alerte;
         $("alerte-km").classList.remove("hidden");
@@ -717,8 +724,23 @@ async function openDossierModal(d) {
     </div>
     <div class="ms">
       <div class="ms-title">Diagnostic & Travaux</div>
-      <div class="mf" style="margin-bottom:10px"><div class="mf-label">DESCRIPTION PANNE</div><div class="mf-block">${esc(d.panne_description)}</div></div>
-      <div class="mf" style="margin-bottom:10px"><div class="mf-label">RÉSOLUTION / TRAVAUX</div><div class="mf-block">${esc(d.panne_resolution)}</div></div>
+      <div id="modal-pannes-section">
+        ${(d.pannes && d.pannes.length) ? `
+          <div class="pannes-summary">
+            <span class="ps-ok">✅ ${d.pannes.filter(p=>p.regle).length} réglée(s)</span>
+            <span class="ps-nok">🔴 ${d.pannes.filter(p=>!p.regle).length} en attente</span>
+          </div>
+          <div id="modal-pannes-list">
+            ${d.pannes.map(p=>`
+              <div class="panne-modal-item ${p.regle?'regle':''}" id="mpi-${p.id}"
+                   onclick="togglePanneModal(${p.id},${d.id})">
+                <div class="pm-check">${p.regle?'✓':'!'}</div>
+                <div class="pm-desc">${esc(p.description)}</div>
+                <div class="pm-status">${p.regle?'Réglé':'En attente'}</div>
+              </div>`).join('')}
+          </div>` : `<div class="empty" style="font-size:12px;margin-bottom:10px">Aucune panne enregistrée.</div>`}
+      </div>
+      <div class="mf" style="margin-bottom:10px"><div class="mf-label">MÉTHODE TECHNIQUE / PROCÉDÉ</div><div class="mf-block">${esc(d.panne_resolution)}</div></div>
       <div class="mf" style="margin-bottom:10px"><div class="mf-label">PIÈCES CHANGÉES</div><div class="mf-block">${esc(d.pieces_changees)}</div></div>
       ${d.observations?`<div class="mf"><div class="mf-label">OBSERVATIONS</div><div class="mf-block">${esc(d.observations)}</div></div>`:""}
       ${d.garantie_mois?`<div style="margin-top:8px">${mf("Garantie pièces",d.garantie_mois+" mois")}</div>`:""}
@@ -926,7 +948,7 @@ function printDossier(d) {
       <div class="p-block">${esc(d.panne_description||"—")}</div>
     </div>
     <div class="p-section">
-      <div class="p-section-title">Travaux effectués</div>
+      <div class="p-section-title">Méthode technique / Procédé</div>
       <div class="p-block">${esc(d.panne_resolution||"—")}</div>
     </div>
     <div class="p-section">
@@ -1185,6 +1207,228 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* ══════════════════════════════════════════════════════════════════
+   PANNES INDÉPENDANTES — FormPannes (gestion locale + sync serveur)
+══════════════════════════════════════════════════════════════════ */
+
+const FormPannes = (() => {
+  // pannes locales : { id (temp négatif si nouveau), description, regle, serverId (null si pas encore sync) }
+  let _pannes = [];
+  let _dossierId = null; // défini si édition d'un dossier existant
+
+  function reset() {
+    _pannes = [];
+    _dossierId = null;
+    _render();
+  }
+
+  function load(pannesFromServer, dossierId) {
+    _dossierId = dossierId || null;
+    _pannes = pannesFromServer.map(p => ({
+      id: p.id, description: p.description, regle: !!p.regle, serverId: p.id
+    }));
+    _render();
+  }
+
+  function getSummary() {
+    // Résumé texte pour panne_description (compatibilité affichage carte)
+    if (!_pannes.length) return "";
+    return _pannes.map(p => `${p.regle ? "✅" : "🔴"} ${p.description}`).join(" | ");
+  }
+
+  async function syncToServer(dossierId) {
+    // Envoyer les pannes sans serverId (nouvelles)
+    for (const p of _pannes) {
+      if (!p.serverId) {
+        const res = await http.post(`/dossiers/${dossierId}/pannes`, { description: p.description });
+        if (res.id) p.serverId = res.id;
+      }
+    }
+  }
+
+  function _render() {
+    const list = $("pannes-list");
+    if (!list) return;
+    if (!_pannes.length) {
+      list.innerHTML = '<div class="empty" style="font-size:12px;padding:8px 0">Aucune panne ajoutée.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    _pannes.forEach(p => {
+      const item = document.createElement("div");
+      item.className = `panne-item${p.regle ? " regle" : ""}`;
+      item.innerHTML = `
+        <div class="panne-check">${p.regle ? "✓" : "!"}</div>
+        <div class="panne-desc">${esc(p.description)}</div>
+        <button class="panne-del" title="Supprimer" onclick="FormPannes._del(${p.id})">✕</button>`;
+      item.addEventListener("click", e => {
+        if (e.target.classList.contains("panne-del")) return;
+        FormPannes._toggle(p.id);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function _toggle(id) {
+    const p = _pannes.find(x => x.id === id);
+    if (!p) return;
+    p.regle = !p.regle;
+    // Si déjà en BDD, envoyer le toggle immédiatement
+    if (p.serverId) {
+      http.patch(`/pannes/${p.serverId}/toggle`, {});
+    }
+    _render();
+  }
+
+  function _del(id) {
+    const p = _pannes.find(x => x.id === id);
+    if (!p) return;
+    if (p.serverId) {
+      http.del(`/pannes/${p.serverId}`);
+    }
+    _pannes = _pannes.filter(x => x.id !== id);
+    _render();
+  }
+
+  function addLocal() {
+    const inp = $("panne-input");
+    const desc = inp?.value.trim();
+    if (!desc) return;
+    const tempId = -(Date.now()); // id temporaire négatif
+    _pannes.push({ id: tempId, description: desc, regle: false, serverId: null });
+    inp.value = "";
+    _render();
+  }
+
+  return { reset, load, getSummary, syncToServer, addLocal, _toggle, _del };
+})();
+
+window.addPanneLocal = () => FormPannes.addLocal();
+
+/* Toggle panne directement depuis le modal dossier */
+async function togglePanneModal(panneId, dossierId) {
+  const res = await http.patch(`/pannes/${panneId}/toggle`, {});
+  if (!res.success) return;
+  const item = document.getElementById(`mpi-${panneId}`);
+  if (!item) return;
+  const isRegle = res.regle === 1;
+  item.className = `panne-modal-item ${isRegle ? "regle" : ""}`;
+  item.querySelector(".pm-check").textContent = isRegle ? "✓" : "!";
+  item.querySelector(".pm-status").textContent = isRegle ? "Réglé" : "En attente";
+  // Mettre à jour le résumé compteur
+  const section = document.getElementById("modal-pannes-section");
+  if (section) {
+    const all = section.querySelectorAll(".panne-modal-item");
+    const okCount = section.querySelectorAll(".panne-modal-item.regle").length;
+    const nokCount = all.length - okCount;
+    const summary = section.querySelector(".pannes-summary");
+    if (summary) {
+      summary.querySelector(".ps-ok").textContent = `✅ ${okCount} réglée(s)`;
+      summary.querySelector(".ps-nok").textContent = `🔴 ${nokCount} en attente`;
+    }
+  }
+}
+window.togglePanneModal = togglePanneModal;
+
+/* ══════════════════════════════════════════════════════════════════
+   PORTAIL VISITEUR — Suivi par plaque sans login
+══════════════════════════════════════════════════════════════════ */
+
+async function visitorSearch() {
+  const plaque = $("vis-plaque")?.value.trim();
+  if (!plaque) { toast("vis-err", "Saisis ta plaque d'immatriculation."); return; }
+  const btn = $("btn-vis-search");
+  btn.textContent = "Recherche…"; btn.disabled = true;
+
+  const data = await fetch(`${window.location.origin}/api/public/vehicle/${encodeURIComponent(plaque)}`)
+    .then(r => r.json()).catch(() => ({ found: false }));
+
+  btn.textContent = "RECHERCHER"; btn.disabled = false;
+
+  const result = $("vis-result");
+  if (!data.found) {
+    result.innerHTML = `<div class="toast toast-err" style="display:block;margin-top:8px">
+      Aucun véhicule trouvé pour la plaque <strong>${esc(plaque)}</strong>.<br>
+      Vérifiez la saisie ou contactez le garage.
+    </div>`;
+    result.classList.remove("hidden");
+    return;
+  }
+
+  const v = data.vehicle;
+  const STATUTS_VIS = { en_attente:"En attente", en_cours:"En cours 🔧",
+                        termine:"Terminé ✅", livre:"Livré 🎉", archive:"Archivé" };
+  const STATUT_COLORS = { en_attente:"var(--amber)", en_cours:"var(--blue)",
+                          termine:"var(--cyan)", livre:"var(--green)", archive:"var(--tx3)" };
+
+  const dosHtml = data.dossiers.length ? data.dossiers.map(d => {
+    const pannesHtml = d.pannes?.length ? d.pannes.map(p => `
+      <div class="vis-panne-item ${p.regle ? "regle" : ""}">
+        <span>${p.regle ? "✅" : "🔴"}</span>
+        <span>${esc(p.description)}</span>
+      </div>`).join("") : '<div style="font-size:12px;color:var(--tx2);padding:4px">Aucune panne listée.</div>';
+
+    return `
+      <div class="vis-dos-item">
+        <div class="vis-dos-head">
+          <span class="vis-dos-num">${esc(d.numero)}</span>
+          <span class="badge" style="background:${STATUT_COLORS[d.statut]||"var(--tx3)"}22;color:${STATUT_COLORS[d.statut]||"var(--tx2)"}">
+            ${STATUTS_VIS[d.statut] || d.statut}
+          </span>
+          <span class="vis-dos-date">${d.date_entree || ""}</span>
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--tx)">Pannes signalées</div>
+        ${pannesHtml}
+        ${d.panne_resolution ? `<div style="font-size:12px;color:var(--tx2);margin-top:8px">
+          <strong style="color:var(--tx)">Méthode technique :</strong> ${esc(d.panne_resolution)}</div>` : ""}
+        ${d.date_sortie_prevue ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">
+          📅 Sortie prévue : ${d.date_sortie_prevue}</div>` : ""}
+      </div>`;
+  }).join("") : '<div class="empty">Aucune intervention enregistrée.</div>';
+
+  result.innerHTML = `
+    <div class="vis-veh-card">
+      <div class="vis-veh-plate">${esc(v.matricule)}</div>
+      <div class="vis-veh-info">
+        ${[v.marque, v.modele, v.annee].filter(Boolean).join(" ") || "—"} · ${v.carburant || "—"}
+        ${v.couleur ? "· " + v.couleur : ""}
+      </div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--tx)">
+        ${data.dossiers.length} intervention(s) enregistrée(s)
+      </div>
+      ${dosHtml}
+    </div>`;
+  result.classList.remove("hidden");
+}
+window.visitorSearch = visitorSearch;
+
+/* ══════════════════════════════════════════════════════════════════
+   THÈME AUTOMATIQUE — Light 7h-18h, Cyan/Navy aléatoire sinon
+══════════════════════════════════════════════════════════════════ */
+
+function applyAutoTheme() {
+  const h = new Date().getHours();
+  let theme;
+  if (h >= 7 && h < 18) {
+    theme = "theme-light";
+  } else {
+    // Aléatoire entre cyan et navy pour la nuit
+    theme = Math.random() < 0.5 ? "theme-cyan" : "theme-navy";
+  }
+  // Retirer toutes les classes de thème existantes
+  document.documentElement.classList.remove("theme-cyan", "theme-navy", "theme-light");
+  // theme-cyan = défaut :root, pas besoin d'ajouter la classe
+  if (theme !== "theme-cyan") {
+    document.documentElement.classList.add(theme);
+  }
+  console.log(`[Theme] Applied: ${theme} (hour: ${h})`);
+}
+
+// Appliquer dès le chargement du DOM + re-vérifier toutes les heures
+document.addEventListener("DOMContentLoaded", applyAutoTheme);
+setInterval(applyAutoTheme, 60 * 60 * 1000);
+
+
+/* ══════════════════════════════════════════════════════════════════
    ANTI-SLEEP + HEALTH SYSTEM — Render Free Tier
    Ping toutes les 10 min pour éviter la mise en veille (seuil 15 min)
 ══════════════════════════════════════════════════════════════════ */
@@ -1255,15 +1499,10 @@ const KeepAlive = (() => {
       <div id="ka-dot" class="ka-dot ka-pending"></div>
       <div class="ka-tooltip">
         <span id="ka-label">Initialisation…</span><br>
-        <span id="ka-detail" class="ka-detail" style="color:#666;font-size:10px">En attente du premier ping</span>
+        <span id="ka-detail" style="color:#888;font-size:10px">En attente du premier ping</span>
       </div>
     `;
     document.body.appendChild(widget);
-
-    document.getElementById("ka-toggle").addEventListener("click", () => {
-      if (intervalId) { stop(); document.getElementById("ka-toggle").textContent = "▶"; }
-      else            { start(); document.getElementById("ka-toggle").textContent = "⏸"; }
-    });
 
     // Styles injectés dynamiquement
     const style = document.createElement("style");
@@ -1285,12 +1524,7 @@ const KeepAlive = (() => {
       .ka-err     { background: #ef4444; box-shadow: 0 0 6px #ef444488; animation: ka-blink 1s infinite; }
       .ka-pending { background: #f59e0b; }
       @keyframes ka-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-    
-      .ka-info, #ka-toggle { display: none; }
-    
-      #ka-widget:hover .ka-tooltip {
-        opacity: 1; pointer-events: auto;
-      }
+      #ka-widget:hover .ka-tooltip { opacity: 1; pointer-events: auto; }
       .ka-tooltip {
         position: absolute;
         bottom: 20px; right: 0;

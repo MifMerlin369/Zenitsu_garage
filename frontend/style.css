@@ -695,6 +695,110 @@ select.finp option { background:var(--bg2); }
   .p-sig-box { border-top:1px solid #666; padding-top:2mm; font-size:8pt; color:#555; }
 }
 
+/* ── PANNES INDÉPENDANTES ──────────────────────────────────────── */
+.pannes-editor {
+  border: 1px solid var(--bd2);
+  border-radius: var(--r);
+  background: var(--bg2);
+  overflow: hidden;
+}
+.pannes-list { padding: 8px; min-height: 48px; }
+.panne-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r);
+  margin-bottom: 4px; background: var(--bg3);
+  border: 1px solid var(--bd);
+  transition: opacity .2s, background .2s;
+  cursor: pointer;
+  user-select: none;
+}
+.panne-item:hover { background: var(--bg1); }
+.panne-item.regle { opacity: .5; }
+.panne-item.regle .panne-desc { text-decoration: line-through; color: var(--tx2); }
+.panne-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--bd2); display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 11px;
+  transition: all .2s;
+}
+.panne-item.regle .panne-check { background: var(--green); border-color: var(--green); color: #000; }
+.panne-item:not(.regle) .panne-check { border-color: var(--red); }
+.panne-desc { flex: 1; font-size: 13px; }
+.panne-del {
+  background: none; border: none; color: var(--tx3);
+  cursor: pointer; font-size: 14px; padding: 2px 4px;
+  border-radius: 3px; transition: color .2s;
+  line-height: 1;
+}
+.panne-del:hover { color: var(--red); }
+.pannes-add-row {
+  display: flex; gap: 8px; padding: 8px;
+  border-top: 1px solid var(--bd);
+  background: var(--bg1);
+}
+.pannes-add-row .finp { flex: 1; margin: 0; }
+
+/* Pannes dans le modal dossier */
+.panne-modal-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r);
+  margin-bottom: 6px; border: 1px solid var(--bd);
+  background: var(--bg2); cursor: pointer;
+  transition: background .15s;
+}
+.panne-modal-item:hover { background: var(--bg3); }
+.panne-modal-item.regle { border-color: var(--green); background: var(--green-d); }
+.panne-modal-item:not(.regle) { border-color: var(--red-d); background: var(--red-d); }
+.pm-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0; font-weight: 700;
+}
+.panne-modal-item.regle .pm-check { background: var(--green); color: #000; }
+.panne-modal-item:not(.regle) .pm-check { background: var(--red-d); border: 2px solid var(--red); color: var(--red); }
+.pm-desc { flex: 1; font-size: 13px; }
+.pm-status { font-size: 10px; color: var(--tx2); flex-shrink: 0; }
+
+/* Compteur pannes dans le modal */
+.pannes-summary {
+  display: flex; gap: 12px; margin-bottom: 10px;
+  font-size: 12px;
+}
+.pannes-summary .ps-ok  { color: var(--green); font-weight: 600; }
+.pannes-summary .ps-nok { color: var(--red);   font-weight: 600; }
+
+/* ── PORTAIL VISITEUR ──────────────────────────────────────────── */
+.vis-result {
+  margin-top: 20px; width: 100%;
+  max-height: 60vh; overflow-y: auto;
+}
+.vis-veh-card {
+  background: var(--bg2); border: 1px solid var(--bd2);
+  border-radius: 10px; padding: 16px; margin-bottom: 14px;
+}
+.vis-veh-plate {
+  font-family: var(--mono); font-size: 20px; font-weight: 700;
+  color: var(--cyan); letter-spacing: .06em; margin-bottom: 4px;
+}
+.vis-veh-info { font-size: 12px; color: var(--tx2); margin-bottom: 12px; }
+.vis-dos-item {
+  background: var(--bg3); border: 1px solid var(--bd);
+  border-radius: 8px; padding: 12px; margin-bottom: 8px;
+}
+.vis-dos-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.vis-dos-num { font-family: var(--mono); font-size: 11px; color: var(--tx2); }
+.vis-dos-date { font-size: 11px; color: var(--tx2); margin-left: auto; }
+.vis-panne-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 5px 8px; border-radius: 4px;
+  margin-bottom: 4px;
+}
+.vis-panne-item.regle { color: var(--green); background: var(--green-d); }
+.vis-panne-item:not(.regle) { color: var(--tx); background: var(--red-d); }
+
 /* ── RESPONSIVE ────────────────────────────────────────────────── */
 @media (max-width:1100px) { .kanban-board { grid-template-columns:repeat(2,1fr); } .dash-grid { grid-template-columns:1fr; } }
 @media (max-width:860px) {

@@ -29,6 +29,39 @@
     <div id="l-err" class="toast toast-err hidden"></div>
     <button id="btn-login" class="btn-cta">CONNEXION</button>
     <div class="login-hint">Tel: +2250575409248</div>
+    <div style="margin-top:16px;text-align:center">
+      <button class="btn-ghost" style="font-size:12px;opacity:.7" onclick="showScreen('visitor')">
+        Suivre mon véhicule par plaque
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ████ VISITEUR ███████████████████████████████████████████████████████ -->
+<div id="sc-visitor" class="screen">
+  <div class="login-bg"><div class="login-grid"></div></div>
+  <div class="login-card" style="max-width:560px">
+    <div class="login-logo">
+      <div class="logo-mark">ZN</div>
+      <div>
+        <div class="logo-sub">SUIVI DE VÉHICULE</div>
+        <div class="logo-title">Zenitsu <em>Garage</em></div>
+      </div>
+    </div>
+    <div class="fgroup">
+      <label class="flbl">NUMÉRO DE PLAQUE</label>
+      <input id="vis-plaque" class="finp mono" placeholder="Ex: 12345-123-16"
+             oninput="this.value=this.value.toUpperCase()"
+             onkeydown="if(event.key==='Enter')visitorSearch()"/>
+    </div>
+    <div id="vis-err" class="toast toast-err hidden"></div>
+    <button id="btn-vis-search" class="btn-cta" onclick="visitorSearch()">RECHERCHER</button>
+    <div style="margin-top:12px;text-align:center">
+      <button class="btn-ghost" style="font-size:12px;opacity:.7" onclick="showScreen('login')">
+        Retour connexion
+      </button>
+    </div>
+    <div id="vis-result" class="vis-result hidden"></div>
   </div>
 </div>
 
@@ -276,10 +309,21 @@
               <input class="finp" id="fi-date-sortie-reelle" type="date"/></div>
           </div>
           <div class="fgrid">
-            <div class="fgroup colfull"><label class="flbl">DESCRIPTION DE LA PANNE</label>
-              <textarea class="finp ta" id="fi-panne" placeholder="Symptômes, codes OBD, plainte client..."></textarea></div>
-            <div class="fgroup colfull"><label class="flbl">RÉSOLUTION / TRAVAUX</label>
-              <textarea class="finp ta" id="fi-resolution" placeholder="Travaux effectués, solution appliquée..."></textarea></div>
+            <div class="fgroup colfull">
+              <label class="flbl">PANNES / PROBLÈMES SIGNALÉS</label>
+              <div class="pannes-editor" id="pannes-editor">
+                <div class="pannes-list" id="pannes-list">
+                  <div class="empty" style="font-size:12px;padding:8px 0">Aucune panne ajoutée.</div>
+                </div>
+                <div class="pannes-add-row">
+                  <input class="finp" id="panne-input" placeholder="Décrire une panne ou un problème..."
+                         onkeydown="if(event.key==='Enter'){event.preventDefault();addPanneLocal()}"/>
+                  <button class="btn-sm-ghost" type="button" onclick="addPanneLocal()">+ Ajouter</button>
+                </div>
+              </div>
+            </div>
+            <div class="fgroup colfull"><label class="flbl">MÉTHODE TECHNIQUE / PROCÉDÉ UTILISÉ</label>
+              <textarea class="finp ta" id="fi-resolution" placeholder="Comment la panne a été diagnostiquée et résolue — méthode, outils, étapes... (visible par toute l'équipe)"></textarea></div>
             <div class="fgroup colfull"><label class="flbl">PIÈCES CHANGÉES</label>
               <textarea class="finp ta ta-sm" id="fi-pieces" placeholder="Filtre à huile, courroie, plaquettes AV/AR..."></textarea></div>
             <div class="fgroup col2"><label class="flbl">GARANTIE SUR PIÈCES</label>
